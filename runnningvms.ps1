@@ -1,8 +1,8 @@
-$script-server = x
-$script-user = x
-$script-password = x
+$script_server = "x"
+$script_user = "x"
+$script_password = "x"
 
-connect-viserver $script-server -User $script-user -Password $script-password -Force
+connect-viserver $script_server -User $script_user -Password $script_password -Force
 
 $Report = @()
 $VMs = Get-VM | Where {$_.PowerState -eq "PoweredOn"}
