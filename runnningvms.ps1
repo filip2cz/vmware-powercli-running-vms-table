@@ -9,8 +9,13 @@ $VMs = Get-VM | Where {$_.PowerState -eq "PoweredOn"} #get all powered on VMs
 $Datastores = Get-Datastore | Select Name, Id #get all datastores
 $PowerOnEvents = Get-VIEvent -Entity $VMs -MaxSamples ([int]::MaxValue) | where {$_ -is [VMware.Vim.VmPoweredOnEvent]} | Group-Object -Property {$_.Vm.Name} #get all power on events
 foreach ($VM in $VMs) {
+    $tmpdate = $null #clear some variables
+    $bettertime = $null #clear some variables
+    $morebettertime = $null #clear some variables
+    $besttime = $null #clear some variables
+
     $lastPO = ($PowerOnEvents | Where { $_.Group[0].Vm.Vm -eq $VM.Id }).Group | Sort-Object -Property CreatedTime -Descending | Select -First 1
-    $row = "" | select VMName,Powerstate,PoweredOnTime,OS,Host,Cluster,Datastore,NumCPU,MemMb,DiskGb,PoweredOnBy
+    $row = "" | select VMName,Powerstate,PoweredOnTime,Cluster,Host,Datastore,OS,NumCPU,MemMb,DiskGb,PoweredOnBy
     $row.VMName = $vm.Name #add VM name
     $row.Powerstate = $vm.Powerstate #add VM powerstate
     if($lastPO.CreatedTime -eq $null) { #if there is no power time in lastPO.CreatedTime variable
@@ -24,12 +29,13 @@ foreach ($VM in $VMs) {
         #get only time from tmpupdate and put it into rot.PoweredOnTime variable
         $bettertime = $tmpdate.replace('T',' ')
         $morebettertime = [Datetime]::ParseExact($bettertime, 'yyyy-MM-dd HH:mm:ss', $null)
-        $besttime = $morebettertime.GetDateTimeFormats()[12]
+        $besttime = $morebettertime.GetDateTimeFormats()[24]
         $row.PoweredOnTime = $besttime
         Remove-PSDrive -Name DS -Confirm:$false #remove datastore drive
     }
     else { #if power on time is in lastPO.CreatedTime variable
-        $row.PoweredOnTime = $lastPO.CreatedTime #add power on time from lastPO.CreatedTime variable
+        $bettertime = $lastPO.CreatedTime.GetDateTimeFormats()[24]
+        $row.PoweredOnTime = $bettertime #add power on time from lastPO.CreatedTime variable
     }
     $row.OS = $vm.Guest.OSFullName
     $row.Host = $vm.VMHost.name
@@ -40,7 +46,7 @@ foreach ($VM in $VMs) {
     $row.DiskGb = Get-HardDisk -VM $vm | Measure-Object -Property CapacityGB -Sum | select -ExpandProperty Sum
     $row.PoweredOnBy   = $lastPO.UserName
     $report += $row
-    
+
     echo "One more VM is done..."
 }
 
